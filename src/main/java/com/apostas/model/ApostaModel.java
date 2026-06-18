@@ -1,11 +1,33 @@
 package com.apostas.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+import java.util.Objects;
+
+@Entity
+@Table(name = "aposta")
 public class ApostaModel {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
     private ParticipanteModel participante;
+
+    @ManyToOne
     private PartidaModel partida;
+
     private int golsMandantePrevisto;
     private int golsVisitantePrevisto;
+
+    protected ApostaModel() {
+    }
 
     public ApostaModel(ParticipanteModel participante, PartidaModel partida, int golsMandantePrevisto, int golsVisitantePrevisto) {
         this.participante = participante;
@@ -34,6 +56,10 @@ public class ApostaModel {
         return 0;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public ParticipanteModel getParticipante() {
         return participante;
     }
@@ -48,5 +74,18 @@ public class ApostaModel {
 
     public int getGolsVisitantePrevisto() {
         return golsVisitantePrevisto;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ApostaModel that = (ApostaModel) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getClass());
     }
 }

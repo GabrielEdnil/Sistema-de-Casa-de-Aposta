@@ -4,9 +4,12 @@ import com.apostas.service.ISistemaApostasService;
 import com.apostas.service.SistemaApostasService;
 import com.apostas.ui.panel.AdminPanel;
 import com.apostas.ui.panel.ParticipantePanel;
+import com.apostas.util.JPAUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class MainFrame extends JFrame {
 
@@ -30,6 +33,13 @@ public class MainFrame extends JFrame {
         setSize(900, 620);
         setLocationRelativeTo(null);
         setResizable(true);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                JPAUtil.close();
+            }
+        });
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
