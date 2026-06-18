@@ -1,16 +1,12 @@
 package com.apostas.service;
 
 import com.apostas.model.*;
+import com.apostas.repository.*;
 import com.apostas.ui.MainFrame;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
-/**
- * IMPLEMENTACAO DO SERVICO SISTEMA APOSTAS EM MEMORIA UTILIZADO APENAS PARA O TRABALHO
- * EM UM CENARIO REAL FARIAMOS UM SERVICO PARA CADA MODEL E UMA ORM PARA O MAPEAMENTO AO BANCO DE DADOS
- */
 public class SistemaApostasService implements ISistemaApostasService {
 
     private final int MAX_GRUPOS = 5;
@@ -18,20 +14,24 @@ public class SistemaApostasService implements ISistemaApostasService {
 
     private static SistemaApostasService sistemaApostasService;
 
+    private final IClubeRepository clubeRepository;
+    private final ICampeonatoRepository campeonatoRepository;
+    private final IPartidaRepository partidaRepository;
+    private final IGrupoRepository grupoRepository;
+    private final IParticipanteRepository participanteRepository;
+    private final IApostaRepository apostaRepository;
+
     private final AdministradorModel administrador;
-    private final List<ClubeModel> clubes;
-    private final List<CampeonatoModel> campeonatos;
-    private final List<PartidaModel> partidas;
-    private final List<GrupoModel> grupos;
-    private final List<ParticipanteModel> participantes;
 
     private SistemaApostasService() {
+        clubeRepository = new ClubeRepository();
+        campeonatoRepository = new CampeonatoRepository();
+        partidaRepository = new PartidaRepository();
+        grupoRepository = new GrupoRepository();
+        participanteRepository = new ParticipanteRepository();
+        apostaRepository = new ApostaRepository();
+
         administrador = new AdministradorModel("Administrador", "admin", MainFrame.SENHA_ADMIN);
-        clubes = new ArrayList<>();
-        campeonatos = new ArrayList<>();
-        partidas = new ArrayList<>();
-        grupos = new ArrayList<>();
-        participantes = new ArrayList<>();
     }
 
     public static SistemaApostasService getInstancia() {
@@ -50,30 +50,32 @@ public class SistemaApostasService implements ISistemaApostasService {
     // CLUBES
     @Override
     public void cadastrarClube(String nome, String sigla) {
-        clubes.add(new ClubeModel(nome, sigla));
+        ClubeModel clube = new ClubeModel(nome, sigla);
+        clubeRepository.salvar(clube);
     }
 
     @Override
     public List<ClubeModel> getClubes() {
-        return clubes;
+        return clubeRepository.listarTodos();
     }
 
     // CAMPEONATOS
     @Override
     public CampeonatoModel cadastrarCampeonato(String nome) {
         CampeonatoModel c = new CampeonatoModel(nome);
-        campeonatos.add(c);
-        return c;
+        return campeonatoRepository.salvar(c);
     }
 
     @Override
     public void adicionarClubeAoCampeonato(CampeonatoModel campeonato, ClubeModel clube) {
         campeonato.adicionarClube(clube);
+        clube.setCampeonato(campeonato);
+        clubeRepository.atualizar(clube);
     }
 
     @Override
     public List<CampeonatoModel> getCampeonatos() {
-        return campeonatos;
+        return campeonatoRepository.listarTodos();
     }
 
     // PARTIDAS
@@ -83,66 +85,59 @@ public class SistemaApostasService implements ISistemaApostasService {
             throw new IllegalArgumentException("Mandante e visitante não podem ser o mesmo clube.");
         }
         PartidaModel p = new PartidaModel(campeonato, mandante, visitante, dataHora);
-        partidas.add(p);
-        return p;
+        return partidaRepository.salvar(p);
     }
 
     @Override
     public List<PartidaModel> getPartidas() {
-        return partidas;
+        return partidaRepository.listarTodos();
     }
 
     // GRUPOS E PARTICIPANTES
     @Override
     public GrupoModel criarGrupo(String nome) {
-        if (grupos.size() >= MAX_GRUPOS) {
+        if (grupoRepository.contar() >= MAX_GRUPOS) {
             throw new IllegalStateException("Limite de " + MAX_GRUPOS + " grupos atingido.");
         }
         GrupoModel g = new GrupoModel(nome);
-        grupos.add(g);
-        return g;
+        return grupoRepository.salvar(g);
     }
 
     @Override
     public ParticipanteModel cadastrarParticipante(String nome, String id) {
-        if (participantes.size() >= MAX_PARTICIPANTES) {
+        if (participanteRepository.contar() >= MAX_PARTICIPANTES) {
             throw new IllegalStateException("Limite de " + MAX_PARTICIPANTES + " participantes atingido.");
         }
-        boolean idExistente = participantes.stream().anyMatch(p -> p.getId().equals(id));
-        if (idExistente) {
+        if (participanteRepository.buscarPorId(id) != null) {
             throw new IllegalArgumentException("ID '" + id + "' já está em uso.");
         }
         ParticipanteModel p = new ParticipanteModel(id, nome);
-        participantes.add(p);
-        return p;
+        return participanteRepository.salvar(p);
     }
 
     @Override
     public void adicionarParticipanteAoGrupo(GrupoModel grupo, ParticipanteModel participante) {
-        for (GrupoModel g : grupos) {
-            if (g.getParticipantes().contains(participante)) {
-                throw new IllegalStateException("Participante já pertence ao grupo '" + g.getNome() + "'.");
-            }
+        ParticipanteModel atual = participanteRepository.buscarPorId(participante.getId());
+        if (atual != null && atual.getGrupo() != null) {
+            throw new IllegalStateException("Participante já pertence ao grupo '" + atual.getGrupo().getNome() + "'.");
         }
-        grupo.adicionarParticipante(participante);
+        participante.setGrupo(grupo);
+        participanteRepository.atualizar(participante);
     }
 
     @Override
     public ParticipanteModel buscarParticipante(String id) {
-        return participantes.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
-                .orElse(null);
+        return participanteRepository.buscarPorId(id);
     }
 
     @Override
     public List<GrupoModel> getGrupos() {
-        return grupos;
+        return grupoRepository.listarTodos();
     }
 
     @Override
     public List<ParticipanteModel> getParticipantes() {
-        return participantes;
+        return participanteRepository.listarTodos();
     }
 
     // APOSTAS
@@ -151,16 +146,17 @@ public class SistemaApostasService implements ISistemaApostasService {
         if (!partida.isApostaPermitida()) {
             throw new IllegalStateException("Apostas encerradas (menos de 20 minutos para a partida).");
         }
-        if (participante.jaApostouEm(partida)) {
+        if (apostaRepository.existe(participante.getId(), partida.getId())) {
             throw new IllegalStateException("Participante já apostou nessa partida.");
         }
         ApostaModel aposta = new ApostaModel(participante, partida, golsMandante, golsVisitante);
-        participante.adicionarAposta(aposta);
+        apostaRepository.salvar(aposta);
     }
 
     // RESULTADOS
     @Override
     public void registrarResultadoPartida(PartidaModel partida, int golsMandante, int golsVisitante) {
         administrador.registrarResultado(partida, golsMandante, golsVisitante);
+        partidaRepository.atualizar(partida);
     }
 }

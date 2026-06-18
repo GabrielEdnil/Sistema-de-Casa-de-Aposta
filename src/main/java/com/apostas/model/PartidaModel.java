@@ -1,16 +1,47 @@
 package com.apostas.model;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+@Entity
+@Table(name = "partida")
 public class PartidaModel {
 
-    private final int MINUTOS_LIMITE_APOSTA = 20;
+    private static final int MINUTOS_LIMITE_APOSTA = 20;
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
     private CampeonatoModel campeonato;
+
+    @ManyToOne
+    @JoinColumn(name = "mandante_id")
     private ClubeModel mandante;
+
+    @ManyToOne
+    @JoinColumn(name = "visitante_id")
     private ClubeModel visitante;
+
     private LocalDateTime dataHora;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "resultado_id")
     private ResultadoPartidaModel resultado;
+
+    protected PartidaModel() {
+    }
 
     public PartidaModel(CampeonatoModel campeonato, ClubeModel mandante, ClubeModel visitante, LocalDateTime dataHora) {
         this.campeonato = campeonato;
@@ -30,6 +61,10 @@ public class PartidaModel {
 
     public boolean temResultado() {
         return resultado != null;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public CampeonatoModel getCampeonato() {
@@ -52,8 +87,25 @@ public class PartidaModel {
         return resultado;
     }
 
+    public void setResultado(ResultadoPartidaModel resultado) {
+        this.resultado = resultado;
+    }
+
     @Override
     public String toString() {
         return mandante.getSigla() + " x " + visitante.getSigla();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PartidaModel that = (PartidaModel) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getClass());
     }
 }

@@ -174,6 +174,7 @@ public class ParticipantePanel extends JPanel {
             }
             try {
                 sistemaApostasService.adicionarParticipanteAoGrupo(grupo, participanteLogado);
+                participanteLogado = sistemaApostasService.buscarParticipante(participanteLogado.getId());
                 logger.info("Você entrou no grupo '" + grupo.getNome() + "'.");
                 atualizarMeusGrupos();
             } catch (IllegalStateException ex) {
@@ -232,6 +233,7 @@ public class ParticipantePanel extends JPanel {
                     return;
                 }
                 sistemaApostasService.adicionarAposta(participanteLogado, partida, gM, gV);
+                participanteLogado = sistemaApostasService.buscarParticipante(participanteLogado.getId());
                 refresh();
                 logger.info("Aposta registrada!");
             } catch (NumberFormatException ex) {
